@@ -1,11 +1,15 @@
 import express from "express"
 import "dotenv/config"
+import path from "node:path"
+
+
 
 
 const app = express();
 const PORT = process.env.PORT ?? 8000
 
 app.use(express.json());
+app.use(express.static(path.resolve("public")));
 
 
 app.get('/', (req, res) => {
