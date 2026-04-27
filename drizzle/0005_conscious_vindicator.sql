@@ -1,0 +1,1 @@
+ALTER TABLE "client_redirect_uris" RENAME COLUMN "redired_uri" TO "redirect_uri";

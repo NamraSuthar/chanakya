@@ -46,7 +46,7 @@ export const clientRedirectUrisTable = pgTable("client_redirect_uris", {
         onDelete: "cascade"
     }),
 
-    redirectUri: text("redired_uri").notNull(),
+    redirectUri: text("redirect_uri").notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });

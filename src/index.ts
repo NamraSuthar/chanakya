@@ -5,7 +5,7 @@ import path from "node:path"
 import jose from "node-jose"
 import { PRIVATE_KEY, PUBLIC_KEY } from "./utils/cert.js"
 
-
+import { findActiveClientByClientId, isRedirectUriAllowed } from "./service/client.service.js"
 
 
 const app = express();
@@ -41,14 +41,54 @@ app.get("/.well-known/openid-configuration", (req, res) => {
     })
 })
 
-app.get("/.well-known/jwks.josn",async (_req,res)=>{
-    const key = await jose.JWK.asKey(PUBLIC_KEY,"pem")
-    
+app.get("/.well-known/jwks.josn", async (_req, res) => {
+    const key = await jose.JWK.asKey(PUBLIC_KEY, "pem")
+
     res.json({
         keys: [key.toJSON()],
     })
 })
 
+app.get("/o/authenticate", async (req, res) => {
+    const clientId = String(req.query.client_id ?? "")
+    const redirectUri = String(req.query.redirect_uri ?? "")
+
+
+    if (!clientId || !redirectUri) {
+        res.status(400).json({
+            message: "client_id and redirect_uri is required",
+        })
+        return;
+    }
+
+    const client = await findActiveClientByClientId(clientId);
+
+    if (!client) {
+        res.status(400).json({
+            message: "Invalid or Inactive client",
+        })
+        return;
+    }
+
+    const redirectUriAllowed = await isRedirectUriAllowed(client.id, redirectUri);
+
+    if (!redirectUriAllowed) {
+        res.status(400).json({
+            message: "Invalid for this client",
+        })
+        return;
+    }
+
+    res.json({
+        message: "Client validation pass",
+        client: {
+            id: client.id,
+            name: client.name,
+            clientId: client.clientId,
+            clientType: client.clientType
+        }
+    })
+})
 
 app.listen(PORT, () => {
     console.log(`server is runnign on ${PORT} port now`);
