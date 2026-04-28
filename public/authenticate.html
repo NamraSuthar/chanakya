@@ -1,50 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign In</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign In</title>
 </head>
+
 <body>
-  <h1>Sign In</h1>
+    <h1>Sign In</h1>
 
-  <form id="loginForm">
-    <div>
-      <label for="email">Email</label>
-      <input id="email" name="email" type="email" required />
-    </div>
+    <form id="loginForm" method="post" action="/o/authenticate/sign-in">
+        <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" required />
+        </div>
 
-    <div>
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" required />
-    </div>
+        <div>
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" required />
+        </div>
 
-    <button type="submit">Sign In</button>
-  </form>
+        <input type="hidden" id="client_id" name="client_id" />
+        <input type="hidden" id="redirect_uri" name="redirect_uri" />
+        <input type="hidden" id="state" name="state" />
+        <input type="hidden" id="nonce" name="nonce" />
 
-  <pre id="result"></pre>
+        <button type="submit">Sign In</button>
+    </form>
 
-  <script>
-    const form = document.getElementById("loginForm");
-    const result = document.getElementById("result");
+    <pre id="result"></pre>
 
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    <script>
 
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
+        const params = new URLSearchParams(window.location.search)
 
-      const response = await fetch("/o/authenticate/sign-in", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-      });
 
-      const data = await response.json();
-      result.textContent = JSON.stringify(data, null, 2);
-    });
-  </script>
+        document.getElementById("client_id").value = params.get("client_id") || "";
+        document.getElementById("redirect_uri").value = params.get("redirect_uri") || "";
+        document.getElementById("state").value = params.get("state") || "";
+        document.getElementById("nonce").value = params.get("nonce") || "";
+    </script>
 </body>
+
 </html>

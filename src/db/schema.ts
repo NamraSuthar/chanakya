@@ -59,7 +59,7 @@ export const authorizationCodesTable = pgTable("authorizetion_codes", {
     clientPk: uuid("client_pk").notNull().references(() => clienttable.id, { onDelete: "cascade" }),
     userPk: uuid("user_id").notNull().references(() => usertable.id, { onDelete: "cascade" }),
 
-    redirecturi: text("redirect_uri").notNull(),
+    redirectUri: text("redirect_uri").notNull(),
     scope: text("scope"),
     nonce: text("nonce"),
     codeChallenge: text("code_challenge"),

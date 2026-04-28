@@ -7,8 +7,8 @@ import jose from "node-jose"
 import { PRIVATE_KEY, PUBLIC_KEY } from "./utils/cert.js"
 
 import { db } from "./db/index.js"
-import { eq } from "drizzle-orm"
-import { usertable } from "./db/schema.js"
+import { and, eq } from "drizzle-orm"
+import { authorizationCodesTable, usertable, accessTokensTable, refreshTokensTable } from "./db/schema.js"
 import { findActiveClientByClientId, isRedirectUriAllowed } from "./service/client.service.js"
 
 
@@ -17,6 +17,7 @@ const PORT = process.env.PORT ?? 8000
 
 app.use(express.json());
 app.use(express.static(path.resolve("public")));
+app.use(express.urlencoded({ extended: true }));
 
 
 app.get('/', (req, res) => {
@@ -88,14 +89,33 @@ app.get("/o/authenticate", async (req, res) => {
 })
 
 app.post("/o/authenticate/sign-in", async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, client_id, redirect_uri, state, nonce } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || !client_id || !redirect_uri) {
         res.status(400).json({
             message: "Email and password are required.",
         });
         return;
     }
+
+    const client = await findActiveClientByClientId(client_id);
+
+    if (!client) {
+        res.status(400).json({
+            message: "Invalid or inactive client.",
+        });
+        return;
+    }
+
+    const redirectUriAllowed = await isRedirectUriAllowed(client.id, redirect_uri);
+
+    if (!redirectUriAllowed) {
+        res.status(400).json({
+            message: "Invalid redirect_uri for this client.",
+        });
+        return;
+    }
+
 
     const [user] = await db
         .select()
@@ -122,16 +142,29 @@ app.post("/o/authenticate/sign-in", async (req, res) => {
         return;
     }
 
-    res.json({
-        message: "User authenticated successfully.",
-        user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-        },
-    });
+    const authorizationCode = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    await db.insert(authorizationCodesTable).values({
+        code: authorizationCode,
+        clientPk: client.id,
+        userPk: user.id,
+        redirectUri: redirect_uri,
+        scope: "openid profile email",
+        nonce: typeof nonce === "string" && nonce.length > 0 ? nonce : undefined,
+        expiresAt,
+    })
+
+    const callbackUrl = new URL(redirect_uri);
+    callbackUrl.searchParams.set("code", authorizationCode);
+
+    if (state) {
+        callbackUrl.searchParams.set("state", state);
+    }
+
+    return res.redirect(callbackUrl.toString());
 });
+
 
 app.get("/signup", (_req, res) => {
     return res.sendFile(path.resolve("public", "signup.html"));
@@ -187,6 +220,118 @@ app.post("/o/authenticate/sign-up", async (req, res) => {
     });
 });
 
+
+app.post("/o/token", async (req, res) => {
+    const { code, client_id, redirect_uri, client_secret, grant_type } = req.body;
+
+    if (
+        !code ||
+        !client_id ||
+        !redirect_uri ||
+        !client_secret ||
+        grant_type !== "authorization_code"
+    ) {
+        res.status(400).json({
+            message: "token route me error hai, lagta hai req body me se koi cheej reh gai hai"
+        })
+        return;
+    }
+
+
+    const client = await findActiveClientByClientId(client_id);
+
+    if (!client) {
+        res.status(400).json({
+            message: "Invalid or inactive client.",
+        });
+        return;
+    }
+
+    if (!client.clientSecret || client.clientSecret !== client_secret) {
+        res.status(401).json({
+            message: "Invalid client credentials.",
+        });
+        return;
+    }
+
+    const [authorizationCode] = await db
+        .select()
+        .from(authorizationCodesTable)
+        .where(
+            and(
+                eq(authorizationCodesTable.code, code),
+                eq(authorizationCodesTable.clientPk, client.id),
+            ),
+        )
+        .limit(1);
+
+    if (!authorizationCode) {
+        res.status(400).json({
+            message: "Invalid authorization code.",
+        });
+        return;
+    }
+
+    if (authorizationCode.redirectUri !== redirect_uri) {
+        res.status(400).json({
+            message: "redirect_uri does not match the authorization request.",
+        });
+        return;
+    }
+
+    if (authorizationCode.consumedAt) {
+        res.status(400).json({
+            message: "Authorization code has already been used.",
+        });
+        return;
+    }
+
+
+    if (authorizationCode.expiresAt.getTime() < Date.now()) {
+        res.status(400).json({
+            message: "Authorization code has expired.",
+        });
+        return;
+    }
+
+
+    await db
+        .update(authorizationCodesTable)
+        .set({
+            consumedAt: new Date(),
+        })
+        .where(eq(authorizationCodesTable.id, authorizationCode.id));
+
+    const accessToken = crypto.randomBytes(32).toString("hex");
+    const refreshToken = crypto.randomBytes(32).toString("hex");
+
+    const accessTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    const refreshTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    await db.insert(accessTokensTable).values({
+        token: accessToken,
+        clientPk: client.id,
+        userPk: authorizationCode.userPk,
+        scope: authorizationCode.scope || "openid profile email",
+        expiresAt: accessTokenExpiresAt,
+    });
+
+    await db.insert(refreshTokensTable).values({
+        token: refreshToken,
+        clientPk: client.id,
+        userPk: authorizationCode.userPk,
+        scope: authorizationCode.scope || "openid profile email",
+        expiresAt: refreshTokenExpiresAt,
+    });
+
+    res.json({
+        token_type: "Bearer",
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_in: 3600,
+        scope: authorizationCode.scope || "openid profile email",
+    });
+})
 
 app.listen(PORT, () => {
     console.log(`server is runnign on ${PORT} port now`);
