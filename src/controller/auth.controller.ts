@@ -79,7 +79,7 @@ export async function signUpUser(req: Request, res: Response) {
             lastName: lastName || null,
             email,
             password: hashedPassword,
-            salt:null,
+            salt: null,
         })
         .returning();
 
@@ -95,7 +95,8 @@ export async function signUpUser(req: Request, res: Response) {
 }
 
 export async function signInUser(req: Request, res: Response) {
-    const { email, password, client_id, redirect_uri, state, nonce } = req.body;
+    const { email, password, client_id, redirect_uri, state, nonce, code_challenge,
+        code_challenge_method } = req.body;
 
     if (!email || !password || !client_id || !redirect_uri) {
         res.status(400).json({
@@ -129,7 +130,7 @@ export async function signInUser(req: Request, res: Response) {
         .where(eq(usertable.email, email))
         .limit(1);
 
-    if (!user || !user.password ) {
+    if (!user || !user.password) {
         res.status(401).json({
             message: "Invalid email or password.",
         });
@@ -155,6 +156,11 @@ export async function signInUser(req: Request, res: Response) {
         redirectUri: redirect_uri,
         scope: "openid profile email",
         nonce: typeof nonce === "string" && nonce.length > 0 ? nonce : undefined,
+        codeChallenge: 
+        typeof code_challenge === "string" && code_challenge.length > 0 ? code_challenge : undefined,
+        codeChallengeMethod:
+        typeof code_challenge_method === "string" && code_challenge_method.length > 0 ? code_challenge : undefined,
+
         expiresAt,
     })
 

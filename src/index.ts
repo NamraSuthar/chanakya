@@ -4,6 +4,7 @@ import path from "node:path"
 
 import { getAuthenticatePage, getSignupPage, signInUser, signUpUser } from "./controller/auth.controller.js"
 import { exchangeToken, getJwks, getOpenIdConfiguration, getTokenInfo, getUserInfo } from "./controller/oidc.controller.js"
+import { createClient, listClients } from "./controller/client.controller.js"
 
 const app = express();
 const PORT = process.env.PORT ?? 8000
@@ -38,6 +39,9 @@ app.post("/o/authenticate/sign-in", signInUser);
 app.post("/o/authenticate/sign-up", signUpUser);
 app.post("/o/token", exchangeToken);
 app.post("/o/tokeninfo", getTokenInfo)
+
+app.post("/clients", createClient);
+app.get("/clients", listClients);
 
 app.listen(PORT, () => {
     console.log(`server is runnign on ${PORT} port now`);

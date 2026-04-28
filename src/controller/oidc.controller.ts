@@ -13,6 +13,19 @@ import { and, eq } from "drizzle-orm"
 import { findActiveClientByClientId, isRedirectUriAllowed } from "../service/client.service.js"
 import { authorizationCodesTable, usertable, accessTokensTable, refreshTokensTable } from "./../db/schema.js"
 
+function toBase64Url(buffer: Buffer) {
+    return buffer
+        .toString("base64")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/g, "");
+}
+
+function generateS256Challenge(codeVerifier: string) {
+    return toBase64Url(
+        crypto.createHash("sha256").update(codeVerifier).digest(),
+    );
+}
 
 
 
@@ -50,6 +63,7 @@ export async function exchangeToken(req: Request, res: Response) {
         redirect_uri,
         grant_type,
         refresh_token,
+        code_verifier,
     } = req.body;
 
     if (!client_id || !client_secret || !grant_type) {
@@ -120,6 +134,30 @@ export async function exchangeToken(req: Request, res: Response) {
                 message: "Authorization code has expired.",
             });
             return;
+        }
+        if (authorizationCode.codeChallenge) {
+            if (!code_verifier) {
+                res.status(400).json({
+                    message: "code_verifier is required for this authorization code.",
+                });
+                return;
+            }
+
+            if (authorizationCode.codeChallengeMethod !== "S256") {
+                res.status(400).json({
+                    message: "Unsupported code_challenge_method.",
+                });
+                return;
+            }
+
+            const computedChallenge = generateS256Challenge(code_verifier);
+
+            if (computedChallenge !== authorizationCode.codeChallenge) {
+                res.status(400).json({
+                    message: "Invalid code_verifier.",
+                });
+                return;
+            }
         }
 
         await db
@@ -265,8 +303,9 @@ export async function exchangeToken(req: Request, res: Response) {
         const newAccessToken = JWT.sign(claims, PRIVATE_KEY, {
             algorithm: "RS256",
         });
-
         const accessTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+        const newRefreshToken = crypto.randomBytes(32).toString("hex");
+        const refreshTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
         await db.insert(accessTokensTable).values({
             token: newAccessToken,
@@ -276,10 +315,26 @@ export async function exchangeToken(req: Request, res: Response) {
             expiresAt: accessTokenExpiresAt,
         });
 
+        await db
+            .update(refreshTokensTable)
+            .set({
+                revokedAt: new Date(),
+            })
+            .where(eq(refreshTokensTable.id, storedRefreshToken.id));
+
+        await db.insert(refreshTokensTable).values({
+            token: newRefreshToken,
+            clientPk: client.id,
+            userPk: user.id,
+            scope: storedRefreshToken.scope || "openid profile email",
+            expiresAt: refreshTokenExpiresAt,
+            rotatedFromTokenPk: storedRefreshToken.id,
+        });
+
         res.json({
             token_type: "Bearer",
             access_token: newAccessToken,
-            refresh_token,
+            refresh_token: newRefreshToken,
             expires_in: 3600,
             scope: storedRefreshToken.scope || "openid profile email",
         });

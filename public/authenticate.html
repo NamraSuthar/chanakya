@@ -25,6 +25,8 @@
         <input type="hidden" id="redirect_uri" name="redirect_uri" />
         <input type="hidden" id="state" name="state" />
         <input type="hidden" id="nonce" name="nonce" />
+<input type="hidden" id="code_challenge" name="code_challenge" />
+<input type="hidden" id="code_challenge_method" name="code_challenge_method" />
 
         <button type="submit">Sign In</button>
     </form>
@@ -40,7 +42,11 @@
         document.getElementById("redirect_uri").value = params.get("redirect_uri") || "";
         document.getElementById("state").value = params.get("state") || "";
         document.getElementById("nonce").value = params.get("nonce") || "";
-    </script>
+        document.getElementById("code_challenge").value = params.get("code_challenge") || "";
+        document.getElementById("code_challenge_method").value = params.get("code_challenge_method") || "";
+
+
+</script>
 </body>
 
 </html>
