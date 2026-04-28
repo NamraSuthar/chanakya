@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express"
 import "dotenv/config"
 import path from "node:path"
-
+import bcrypt from "bcrypt"
 import crypto from "node:crypto"
 import jose from "node-jose"
 import JWT from "jsonwebtoken"
@@ -82,7 +82,19 @@ export async function exchangeToken(req: Request, res: Response) {
         return;
     }
 
-    if (!client.clientSecret || client.clientSecret !== client_secret) {
+    if (!client.clientSecret) {
+        res.status(401).json({
+            message: "Invalid client credentials.",
+        });
+        return;
+    }
+
+    const clientSecretMatches = await bcrypt.compare(
+        client_secret,
+        client.clientSecret,
+    );
+
+    if (!clientSecretMatches) {
         res.status(401).json({
             message: "Invalid client credentials.",
         });

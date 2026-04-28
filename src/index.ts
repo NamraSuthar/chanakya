@@ -2,6 +2,8 @@ import express from "express"
 import "dotenv/config"
 import path from "node:path"
 
+import { getClientByClientId, updateClient } from "./controller/client.controller.js"
+import { requiredAdminKey } from "./middleware/admin.middleware.js"
 import { getAuthenticatePage, getSignupPage, signInUser, signUpUser } from "./controller/auth.controller.js"
 import { exchangeToken, getJwks, getOpenIdConfiguration, getTokenInfo, getUserInfo } from "./controller/oidc.controller.js"
 import { createClient, listClients } from "./controller/client.controller.js"
@@ -40,8 +42,11 @@ app.post("/o/authenticate/sign-up", signUpUser);
 app.post("/o/token", exchangeToken);
 app.post("/o/tokeninfo", getTokenInfo)
 
-app.post("/clients", createClient);
-app.get("/clients", listClients);
+app.post("/clients", requiredAdminKey, createClient);
+app.get("/clients", requiredAdminKey, listClients);
+app.get("/clients/:clientId", requiredAdminKey, getClientByClientId);
+app.patch("/clients/:clientId", requiredAdminKey, updateClient);
+
 
 app.listen(PORT, () => {
     console.log(`server is runnign on ${PORT} port now`);
