@@ -7,13 +7,14 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "seed:client":"tsx src/scripts/seed-client.ts",
+    "seed:client": "tsx src/scripts/seed-client.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "dev": "tsc-watch --onSuccess \"node dist/index\""
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
@@ -22,6 +23,7 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.6.0",
