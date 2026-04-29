@@ -7,10 +7,11 @@ import { db } from "../db/index.js"
 import { usertable, authorizationCodesTable } from "../db/schema.js"
 import type { Request, Response } from "express"
 import { findActiveClientByClientId, isRedirectUriAllowed } from "../service/client.service.js"
+import { validateEmail, validatePassword } from "../utils/validators.js"
 
 
 export function getSignupPage(_req: Request, res: Response) {
-    return res.sendFile(path.resolve("public", "dignup.html"))
+    return res.sendFile(path.resolve("public", "signup.html"))
 }
 
 export async function getAuthenticatePage(req: Request, res: Response) {
@@ -53,6 +54,20 @@ export async function signUpUser(req: Request, res: Response) {
     if (!firstName || !email || !password) {
         res.status(400).json({
             message: "First name, email, and password are required.",
+        });
+        return;
+    }
+
+    if (!validateEmail(email)) {
+        res.status(400).json({
+            message: "Invalid email format.",
+        });
+        return;
+    }
+
+    if (!validatePassword(password)) {
+        res.status(400).json({
+            message: "Password must be at least 8 characters long.",
         });
         return;
     }
@@ -101,6 +116,13 @@ export async function signInUser(req: Request, res: Response) {
     if (!email || !password || !client_id || !redirect_uri) {
         res.status(400).json({
             message: "Email and password are required.",
+        });
+        return;
+    }
+
+    if (!validateEmail(email)) {
+        res.status(400).json({
+            message: "Invalid email format.",
         });
         return;
     }

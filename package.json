@@ -1,5 +1,5 @@
 {
-  "name": "chanakya",
+  "name": "Dwaar",
   "version": "1.0.0",
   "description": "OIDC MY OWN OAUTH",
   "license": "ISC",
@@ -11,9 +11,12 @@
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
-    "dev": "tsc-watch --onSuccess \"node dist/index\""
+    "dev": "tsc-watch --onSuccess \"node dist/index\"",
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",

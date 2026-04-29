@@ -12,6 +12,7 @@ import { db } from "./../db/index.js"
 import { and, eq } from "drizzle-orm"
 import { findActiveClientByClientId, isRedirectUriAllowed } from "../service/client.service.js"
 import { authorizationCodesTable, usertable, accessTokensTable, refreshTokensTable } from "./../db/schema.js"
+import { validateAuthorizationCode, validateAccessToken } from "../utils/token-validator.js"
 
 function toBase64Url(buffer: Buffer) {
     return buffer
@@ -45,7 +46,7 @@ export function getOpenIdConfiguration(_req: Request, res: Response) {
         authorization_endpoint: `${issuer}/o/authenticate`,
         token_endpoint: `${issuer}/o/token`,
         userinfo_endpoint: `${issuer}/o/userinfo`,
-        jwks_uri: `${issuer}/.well-known/jwks.josn`,
+        jwks_uri: `${issuer}/.well-known/jwks.json`,
     })
 }
 
@@ -133,9 +134,9 @@ export async function exchangeToken(req: Request, res: Response) {
             )
             .limit(1);
 
-        if (!authorizationCode) {
+        if (!authorizationCode || !validateAuthorizationCode(authorizationCode)) {
             res.status(400).json({
-                message: "Invalid authorization code.",
+                message: "Invalid, expired, or already consumed authorization code.",
             });
             return;
         }
@@ -146,20 +147,7 @@ export async function exchangeToken(req: Request, res: Response) {
             });
             return;
         }
-
-        if (authorizationCode.consumedAt) {
-            res.status(400).json({
-                message: "Authorization code has already been used.",
-            });
-            return;
-        }
-
-        if (authorizationCode.expiresAt.getTime() < Date.now()) {
-            res.status(400).json({
-                message: "Authorization code has expired.",
-            });
-            return;
-        }
+        
         if (authorizationCode.codeChallenge) {
             if (!code_verifier) {
                 res.status(400).json({

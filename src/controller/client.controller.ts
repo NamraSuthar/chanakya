@@ -86,18 +86,16 @@ export async function listClients(_req: Request, res: Response) {
 
 export async function getClientByClientId(req: Request, res: Response) {
 
-    const clientIdRaw = req.params.clientId;
-    if (!clientIdRaw || Array.isArray(clientIdRaw)) {
+    const clientId = req.params.clientId;
+    if (!clientId || Array.isArray(clientId)) {
         res.status(400).json({ message: "Invalid clientId." });
         return;
     }
 
-    const clientIdFromRaw = clientIdRaw;
-
     const [client] = await db
         .select()
         .from(clienttable)
-        .where(eq(clienttable.clientId, clientIdFromRaw))
+        .where(eq(clienttable.clientId, clientId))
         .limit(1);
 
     if (!client) {
