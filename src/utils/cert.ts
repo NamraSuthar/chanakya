@@ -1,5 +1,15 @@
+import "dotenv/config"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 
-export const PRIVATE_KEY = readFileSync(path.resolve("cert/private-key.pem"))
-export const PUBLIC_KEY = readFileSync(path.resolve("cert/public-key.pub"))
+function readKeyFromFile(filePath: string){
+    return readFileSync(path.resolve(filePath)).toString();
+}
+
+const privateKeyFromEnv = process.env.PRIVATE_KEY_PEM
+const publicKeyFromEnv = process.env.PUBLIC_KEY_PEM
+
+
+export const PRIVATE_KEY = privateKeyFromEnv ? privateKeyFromEnv: readKeyFromFile("cert/private-key.pem")
+export const PUBLIC_KEY = publicKeyFromEnv ? publicKeyFromEnv: readKeyFromFile("cert/public-key.pub")
+

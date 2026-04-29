@@ -3,7 +3,7 @@ import "dotenv/config"
 import path from "node:path"
 import bcrypt from "bcrypt"
 import crypto from "node:crypto"
-import jose from "node-jose"
+import { exportJWK, importSPKI } from "jose"
 import JWT from "jsonwebtoken"
 
 import { PRIVATE_KEY, PUBLIC_KEY } from "./../utils/cert.js"
@@ -32,24 +32,37 @@ function generateS256Challenge(codeVerifier: string) {
 
 export function getOpenIdConfiguration(_req: Request, res: Response) {
 
-    const port = process.env.PORT ?? "3000"
-    const issuer = `https://localhost:${port}`;
+    const issuer = process.env.ISSUER_URL;
+
+    if (!issuer) {
+        res.status(500).json({
+            message: "issuer url is not configured ",
+        })
+    }
 
     res.json({
         issuer,
         authorization_endpoint: `${issuer}/o/authenticate`,
         token_endpoint: `${issuer}/o/token`,
         userinfo_endpoint: `${issuer}/o/userinfo`,
-        jwks_uri: `${issuer}/.well-known/jwks.json`,
+        jwks_uri: `${issuer}/.well-known/jwks.josn`,
     })
 }
 
 export async function getJwks(_req: Request, res: Response) {
 
-    const key = await jose.JWK.asKey(PUBLIC_KEY, "pem")
+    const publicKey = await importSPKI(PUBLIC_KEY.toString(), "RS256")
+    const jwk = await exportJWK(publicKey)
 
     res.json({
-        keys: [key.toJSON()],
+        keys:
+        {
+            ...jwk,
+            use: "sig",
+            alg: "RS256",
+            kid: "mian-key",
+        }
+
     })
 
 }
@@ -193,9 +206,16 @@ export async function exchangeToken(req: Request, res: Response) {
         }
 
         const now = Math.floor(Date.now() / 1000);
-
+        const issuer = process.env.ISSUER_URL;
+        if (!issuer) {
+            res.status(500).json({
+                message: "issuer URL is not configured!"
+            })
+            return;
+        }
+        
         const claims: JWTClaims = {
-            iss: `http://localhost:${process.env.PORT ?? 8000}`,
+            iss: issuer,
             sub: user.id,
             email: user.email ?? "",
             email_verified: user.emailVerified,
