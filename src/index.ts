@@ -78,9 +78,9 @@ app.patch("/clients/:clientId", adminRateLimit, requiredAdminKey, updateClient);
 
 
 app.listen(PORT, () => {
-    console.log(`\n✅ Server is running on port ${PORT}`);
-    console.log(`📝 Environment: ${NODE_ENV}`);
-    console.log(`🔒 CORS Origins: ${ALLOWED_ORIGINS.join(", ")}`);
-    console.log(`📍 OIDC Issuer: ${process.env.ISSUER_URL ?? "Not configured"}`);
-    console.log(`\n🌐 API Documentation: http://localhost:${PORT}/.well-known/openid-configuration\n`);
+    console.log(`\n Server is running on port ${PORT}`);
+    // console.log(`📝 Environment: ${NODE_ENV}`);
+    // console.log(`🔒 CORS Origins: ${ALLOWED_ORIGINS.join(", ")}`);
+    console.log(` OIDC Issuer: ${process.env.ISSUER_URL ?? "Not configured"}`);
+    console.log(`\n API Documentation: http://localhost:${PORT}/.well-known/openid-configuration\n`);
 })
