@@ -185,7 +185,7 @@
       try {
         errorDiv.textContent = "";
         const response = await fetch("/o/authenticate/sign-up", {
-          method: "POST",
+          method: "GET",
           headers: {
             "Content-Type": "application/json"
           },
