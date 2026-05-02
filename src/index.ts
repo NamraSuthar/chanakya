@@ -67,7 +67,7 @@ app.get("/o/userinfo", tokenRateLimit, getUserInfo)
 
 
 app.post("/o/authenticate/sign-in", authRateLimit, signInUser);
-app.post("/o/authenticate/sign-up", authRateLimit, signUpUser);
+app.get("/o/authenticate/sign-up", authRateLimit, signUpUser);
 app.post("/o/token", tokenRateLimit, exchangeToken);
 app.post("/o/tokeninfo", tokenRateLimit, getTokenInfo)
 
