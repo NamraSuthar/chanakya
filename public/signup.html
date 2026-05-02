@@ -142,6 +142,12 @@
         </div>
 
         <button type="submit">Create Account</button>
+        <input type="hidden" id="client_id" name="client_id" />
+        <input type="hidden" id="redirect_uri" name="redirect_uri" />
+        <input type="hidden" id="state" name="state" />
+        <input type="hidden" id="nonce" name="nonce" />
+        <input type="hidden" id="code_challenge" name="code_challenge" />
+        <input type="hidden" id="code_challenge_method" name="code_challenge_method" />
       </form>
 
       <div id="result"></div>
@@ -157,6 +163,15 @@
     const result = document.getElementById("result");
     const errorDiv = document.getElementById("error");
     const successDiv = document.getElementById("success");
+
+    // Populate hidden OIDC params if provided
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById("client_id").value = params.get("client_id") || "";
+    document.getElementById("redirect_uri").value = params.get("redirect_uri") || "";
+    document.getElementById("state").value = params.get("state") || "";
+    document.getElementById("nonce").value = params.get("nonce") || "";
+    document.getElementById("code_challenge").value = params.get("code_challenge") || "";
+    document.getElementById("code_challenge_method").value = params.get("code_challenge_method") || "";
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -182,10 +197,10 @@
         return;
       }
 
-      try {
+        try {
         errorDiv.textContent = "";
         const response = await fetch("/o/authenticate/sign-up", {
-          method: "GET",
+          method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
@@ -193,7 +208,13 @@
             firstName,
             lastName: lastName || null,
             email,
-            password
+            password,
+            client_id: document.getElementById("client_id").value || undefined,
+            redirect_uri: document.getElementById("redirect_uri").value || undefined,
+            state: document.getElementById("state").value || undefined,
+            nonce: document.getElementById("nonce").value || undefined,
+            code_challenge: document.getElementById("code_challenge").value || undefined,
+            code_challenge_method: document.getElementById("code_challenge_method").value || undefined,
           })
         });
 
@@ -202,9 +223,11 @@
         if (response.ok) {
           successDiv.textContent = "Account created successfully! Redirecting to login...";
           form.reset();
+          // Redirect back to authenticate page preserving original params so the user can sign in and complete the flow
+          const query = window.location.search || '';
           setTimeout(() => {
-            window.location.href = "/o/authenticate/sign-up";
-          }, 2000);
+            window.location.href = "/o/authenticate" + query;
+          }, 1200);
         } else {
           errorDiv.textContent = data.message || "Sign up failed";
           result.textContent = JSON.stringify(data, null, 2);

@@ -133,7 +133,7 @@
             </form>
 
             <div class="footer">
-                Don't have an account? <a href="/signup">Create one</a>
+                Don't have an account? <a id="signupLink" href="/signup">Create one</a>
             </div>
         </div>
     </div>
@@ -157,6 +157,12 @@
         document.getElementById("nonce").value = params.get("nonce") || "";
         document.getElementById("code_challenge").value = params.get("code_challenge") || "";
         document.getElementById("code_challenge_method").value = params.get("code_challenge_method") || "";
+
+        // Update signup link to preserve params
+        const signupLink = document.getElementById("signupLink");
+        if (signupLink) {
+            signupLink.setAttribute("href", "/signup" + window.location.search);
+        }
 
         // Handle form submission errors
         document.getElementById("loginForm").addEventListener("submit", async (e) => {
