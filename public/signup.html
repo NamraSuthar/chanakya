@@ -203,7 +203,7 @@
           successDiv.textContent = "Account created successfully! Redirecting to login...";
           form.reset();
           setTimeout(() => {
-            window.location.href = "/o/authenticate";
+            window.location.href = "/o/authenticate/sign-up";
           }, 2000);
         } else {
           errorDiv.textContent = data.message || "Sign up failed";
